@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>助動詞 音読練習</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --ink:#172033; --muted:#687386;
+      --main:#7b4fe8; --soft:#f1ecff; --ok:#10a36f; --line:#dce3ef;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink);}
+    header{padding:22px 16px 14px; text-align:center;}
+    h1{margin:0 0 6px; font-size:clamp(24px,4vw,38px);}
+    .sub{color:var(--muted); font-size:15px;}
+    main{max-width:980px; margin:0 auto; padding:0 14px 28px;}
+    .panel{background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:0 10px 26px rgba(26,42,68,.08); padding:18px;}
+    .toprow{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px;}
+    .badge{background:var(--soft); color:var(--main); font-weight:800; padding:8px 12px; border-radius:999px;}
+    .progressWrap{height:12px; background:#edf1f7; border-radius:999px; overflow:hidden; flex:1; min-width:180px;}
+    .progress{height:100%; width:0%; background:var(--main); transition:.25s;}
+    .sentenceBox{border:2px solid var(--line); border-radius:18px; padding:20px; background:linear-gradient(180deg,#fff,#fbfdff); min-height:250px; display:flex; flex-direction:column; justify-content:center;}
+    .label{color:var(--muted); font-size:14px; font-weight:700; margin-bottom:8px;}
+    .en{font-family:Georgia,"Times New Roman",serif; font-size:clamp(28px,4.2vw,48px); line-height:1.35; font-weight:700; margin-bottom:22px;}
+    .ja{font-size:clamp(18px,2.5vw,26px); line-height:1.55; background:#fff8e7; border:1px solid #f1dfac; border-radius:14px; padding:14px;}
+    .note{font-size:15px; line-height:1.5; color:var(--muted); margin-top:10px; padding:10px 12px; background:#f8fafc; border:1px dashed var(--line); border-radius:12px;}
+    .ja.hidden,.note.hidden{visibility:hidden;}
+    .buttons{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+    button, select{font-size:16px; border:none; border-radius:14px; padding:13px 12px; font-weight:800; cursor:pointer;}
+    button{background:#eef3fb; color:var(--ink);}
+    button.primary{background:var(--main); color:white;}
+    button.green{background:var(--ok); color:white;}
+    button:active{transform:translateY(1px)}
+    .settings{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; color:var(--muted);}
+    select{background:white; border:1px solid var(--line); color:var(--ink); min-width:220px; font-weight:600;}
+    .list{margin-top:18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:8px;}
+    .item{border:1px solid var(--line); border-radius:12px; background:white; padding:10px; cursor:pointer; font-size:14px; line-height:1.35;}
+    .item.active{border-color:var(--main); background:var(--soft);}
+    .itemDone{color:var(--ok); font-weight:900; margin-right:4px;}
+    .small{font-size:13px; color:var(--muted); margin-top:10px;}
+    @media(max-width:680px){.buttons{grid-template-columns:repeat(2,1fr)} .sentenceBox{min-height:310px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>助動詞 音読練習</h1>
+    <div class="sub">一文ずつ表示・和訳つき・英文読み上げ</div>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="toprow">
+        <div class="badge" id="counter">1 / 38</div>
+        <div class="progressWrap"><div class="progress" id="progress"></div></div>
+      </div>
+
+      <div class="sentenceBox">
+        <div class="label" id="typeLabel">問題</div>
+        <div class="en" id="english"></div>
+        <div class="ja" id="japanese"></div>
+        <div class="note" id="note"></div>
+      </div>
+
+      <div class="buttons">
+        <button id="prevBtn">← 前へ</button>
+        <button class="primary" id="speakBtn">▶ 音読</button>
+        <button class="green" id="repeatBtn">🔁 3回</button>
+        <button id="nextBtn">次へ →</button>
+      </div>
+
+      <div class="buttons">
+        <button id="slowBtn">🐢 ゆっくり</button>
+        <button id="hideJaBtn">和訳を隠す</button>
+        <button id="doneBtn">できた ✓</button>
+        <button id="shuffleBtn">ランダム</button>
+      </div>
+
+      <div class="settings">
+        <label>Voice: <select id="voiceSelect"></select></label>
+        <label>Speed: <select id="rateSelect">
+          <option value="0.7">0.7 ゆっくり</option>
+          <option value="0.85" selected>0.85 少しゆっくり</option>
+          <option value="1">1.0 普通</option>
+        </select></label>
+      </div>
+      <div class="small">スペースキー：音読　← →：前後移動</div>
+    </section>
+    <div class="list" id="list"></div>
+  </main>
+
+<script>
+const sentences = [
+  {type:'例題 020', en:"Jane can't run the marathon today because she has a sprained ankle.", ja:'ジェーンは足首を捻挫しているので、今日はマラソンを走ることができません。', note:"can’t + 動詞の原形 = ～できない"},
+  {type:'例題 021', en:'When I saw his performance on TV, I decided that I would be a dancer.', ja:'テレビで彼の演技を見たとき、私はダンサーになろうと決心しました。', note:'would = will の過去形。過去から見た未来を表します。'},
+  {type:'例題 022', en:'As my mother was sick in bed, I had to prepare dinner for my family yesterday.', ja:'母が病気で寝ていたので、昨日私は家族のために夕食を作らなければなりませんでした。', note:'had to + 動詞の原形 = ～しなければならなかった'},
+  {type:'例題 023', en:"You've been very busy for six months. You should take a few days off.", ja:'あなたは6か月間とても忙しくしています。数日休みを取るべきです。', note:'should + 動詞の原形 = ～すべきだ'},
+  {type:'例題 024', en:'You had better not buy such a thing.', ja:'あなたはそんなものを買わないほうがいいです。', note:'had better not + 動詞の原形 = ～しないほうがよい'},
+  {type:'例題 025', en:'Since Jimmy can solve the difficult problem, he must be a genius.', ja:'ジミーはその難しい問題を解くことができるので、彼は天才に違いありません。', note:'must be = ～に違いない'},
+  {type:'例題 026', en:'There used to be an old cherry tree in front of the school.', ja:'学校の前には昔、古い桜の木がありました。', note:'used to be = 以前は～だった'},
+  {type:'例題 027', en:'Taro got a perfect score on the math test. He must have studied very hard.', ja:'太郎は数学のテストで満点を取りました。彼はとても一生懸命勉強したに違いありません。', note:'must have + 過去分詞 = ～したに違いない'},
+  {type:'例題 028', en:'The festival last night was really fun. You should have come.', ja:'昨夜のお祭りは本当に楽しかったです。あなたも来ればよかったのに。', note:'should have + 過去分詞 = ～すべきだった'},
+  {type:'例題 029', en:'It is necessary that you should have a physical examination.', ja:'あなたが健康診断を受けることが必要です。', note:'It is necessary that 主語 should 動詞の原形 = 主語が～することが必要だ'},
+  {type:'例題 030', en:'I would rather stay home than go out tonight.', ja:'私は今夜、外出するより家にいたいです。', note:'would rather A than B = BするよりAしたい'},
+
+  {type:'演習 1', en:'You can wait in my office, if you like.', ja:'よろしければ、私のオフィスで待っていてもいいですよ。', note:'can = ～してもよい'},
+  {type:'演習 2', en:"Don't throw the textbook away. You might need it later.", ja:'その教科書を捨てないで。あとで必要になるかもしれません。', note:'might = ～かもしれない'},
+  {type:'演習 3', en:'She would not give up smoking, although I asked her to many times.', ja:'私が何度も彼女に頼んだのに、彼女はどうしてもタバコをやめようとしませんでした。', note:'would not = どうしても～しようとしなかった'},
+  {type:'演習 4', en:'The train was delayed yesterday, so she had to take a taxi.', ja:'昨日電車が遅れたので、彼女はタクシーに乗らなければなりませんでした。', note:'had to = ～しなければならなかった'},
+  {type:'演習 5', en:'You ought to leave before it gets dark.', ja:'暗くなる前に出発すべきです。', note:'ought to + 動詞の原形 = ～すべきだ'},
+  {type:'演習 6', en:'You had better not trust that man. He is a terrible liar.', ja:'あの男を信用しないほうがいいです。彼はひどい嘘つきです。', note:'had better not + 動詞の原形 = ～しないほうがよい'},
+  {type:'演習 7', en:'Karen must be tired since she has been terribly busy recently.', ja:'カレンは最近ものすごく忙しいので、疲れているに違いありません。', note:'must be = ～に違いない'},
+  {type:'演習 8', en:'He has just had a big lunch. He cannot be hungry.', ja:'彼はたった今たくさん昼食を食べました。お腹がすいているはずがありません。', note:'cannot be = ～であるはずがない'},
+  {type:'演習 9', en:'They used to be good friends, but unfortunately, not anymore.', ja:'彼らは以前は良い友だちでしたが、残念ながら今は違います。', note:'used to be = 以前は～だった'},
+  {type:'演習 10', en:'I used to take the bus to my office, but now I walk.', ja:'私は以前は職場までバスで行っていましたが、今は歩いています。', note:'used to + 動詞の原形 = 以前は～していた'},
+  {type:'演習 11', en:'When I was a child, I would look up at the clouds for hours.', ja:'子どものころ、私は何時間も雲を見上げたものでした。', note:'would = よく～したものだ'},
+  {type:'演習 12', en:"I've lost my cellphone. I must have left it somewhere.", ja:'携帯電話をなくしました。どこかに置き忘れたに違いありません。', note:'must have + 過去分詞 = ～したに違いない'},
+  {type:'演習 13', en:"You can't have seen Helen in London this morning. She has been in New York for a week.", ja:'あなたが今朝ロンドンでヘレンに会ったはずがありません。彼女は1週間ニューヨークにいます。', note:"can't have + 過去分詞 = ～したはずがない"},
+  {type:'演習 14', en:"Robert might have been at the concert last night, but we didn't see him there.", ja:'ロバートは昨夜そのコンサートにいたかもしれませんが、私たちはそこで彼を見かけませんでした。', note:'might have + 過去分詞 = ～したかもしれない'},
+  {type:'演習 15', en:'I should have given you a call this morning, but I was too busy.', ja:'今朝あなたに電話すべきでしたが、忙しすぎました。', note:'should have + 過去分詞 = ～すべきだった'},
+  {type:'演習 16', en:"You shouldn't have told anybody about it. You knew it was our secret.", ja:'そのことを誰にも話すべきではありませんでした。それが私たちの秘密だと知っていましたよね。', note:"shouldn't have + 過去分詞 = ～すべきではなかった"},
+  {type:'演習 17', en:'It is essential that every surgeon have a chance to receive the best possible training.', ja:'すべての外科医が可能な限り最高の訓練を受ける機会を持つことが不可欠です。', note:'It is essential that 主語 + 動詞の原形 = 主語が～することが不可欠だ'},
+  {type:'演習 18', en:'I would rather walk two kilometers than wait an hour for the bus.', ja:'私はバスを1時間待つより、2キロ歩くほうがよいです。', note:'would rather A than B = BするよりAしたい'},
+  {type:'演習 19', en:'Sue and I would rather not stay up late tonight because we are going to the beach tomorrow.', ja:'スーと私は明日ビーチに行くので、今夜は夜更かししたくありません。', note:'would rather not + 動詞の原形 = むしろ～したくない'},
+  {type:'演習 20', en:'I cannot afford to buy a new car after buying a house.', ja:'家を買ったあとでは、新しい車を買う余裕がありません。', note:'cannot afford to + 動詞の原形 = ～する余裕がない'},
+  {type:'演習 21', en:"She tried to be serious, but she couldn't help laughing.", ja:'彼女は真面目でいようとしましたが、笑わずにはいられませんでした。', note:"can't help -ing = ～せずにはいられない"},
+  {type:'演習 22', en:"You can't be too careful when driving a car.", ja:'車を運転するときは、いくら注意してもしすぎることはありません。', note:"can't be too + 形容詞 = いくら～してもしすぎることはない"},
+  {type:'演習 23', en:'You may well get angry with Tom. He often breaks his promises.', ja:'あなたがトムに腹を立てるのももっともです。彼はよく約束を破ります。', note:'may well + 動詞の原形 = ～するのももっともだ'},
+  {type:'演習 24', en:'You might as well throw away your money as spend it gambling.', ja:'お金をギャンブルに使うくらいなら、捨てるのと同じです。', note:'might as well A as B = BするくらいならAしたほうがましだ'},
+  {type:'演習 25', en:'Daniel will never listen! You might as well be talking to a brick wall.', ja:'ダニエルは絶対に聞きません！まるでレンガの壁に話しかけているようなものです。', note:'might as well be -ing = ～しているようなものだ'},
+
+  {type:'Writing 1', en:'You had better not eat so many sugary snacks.', ja:'そんなにたくさんの糖分の多いお菓子を食べないほうがいいです。', note:'You / had / better / not / eat / so many / sugary / snacks'},
+  {type:'Writing 2', en:'I must have dropped it at the restaurant.', ja:'私はそれをレストランで落としたに違いありません。', note:'I / must / have / dropped / it / at / the restaurant'},
+  {type:'Writing 3', en:'You should have checked it more carefully.', ja:'あなたはそれをもっと注意深く確認すべきでした。', note:'You / should / have / checked / it / more / carefully'}
+];
+
+let order = sentences.map((_,i)=>i);
+let pos = 0;
+let done = new Set(JSON.parse(localStorage.getItem('modalAuxiliaryDone')||'[]'));
+let voices = [];
+
+const $ = id => document.getElementById(id);
+function saveDone(){ localStorage.setItem('modalAuxiliaryDone', JSON.stringify([...done])); }
+function currentIndex(){ return order[pos]; }
+function render(){
+  const i = currentIndex(); const s = sentences[i];
+  $('counter').textContent = `${pos+1} / ${sentences.length}`;
+  $('progress').style.width = `${((pos+1)/sentences.length)*100}%`;
+  $('typeLabel').textContent = s.type;
+  $('english').textContent = s.en;
+  $('japanese').textContent = s.ja;
+  $('note').textContent = s.note || '';
+  document.querySelectorAll('.item').forEach((el,k)=>{
+    el.classList.toggle('active', k===pos);
+    const idx = order[k];
+    el.innerHTML = `${done.has(idx)?'<span class="itemDone">✓</span>':''}${sentences[idx].type}: ${sentences[idx].en}`;
+  });
+}
+function buildList(){
+  const list = $('list'); list.innerHTML='';
+  order.forEach((idx,k)=>{
+    const div = document.createElement('div'); div.className='item';
+    div.onclick = ()=>{pos=k; render(); window.scrollTo({top:0,behavior:'smooth'});};
+    list.appendChild(div);
+  });
+  render();
+}
+function loadVoices(){
+  voices = speechSynthesis.getVoices().filter(v=>v.lang && v.lang.toLowerCase().startsWith('en'));
+  const sel = $('voiceSelect'); sel.innerHTML='';
+  voices.forEach((v,i)=>{
+    const opt=document.createElement('option'); opt.value=i; opt.textContent=`${v.name} (${v.lang})`; sel.appendChild(opt);
+  });
+  const preferred = voices.findIndex(v => /female|samantha|victoria|zira|susan|karen|moira|serena|siri/i.test(v.name));
+  if(preferred >= 0) sel.value = preferred;
+}
+function speak(rateOverride=null){
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(sentences[currentIndex()].en);
+  const vi = Number($('voiceSelect').value || 0);
+  if(voices[vi]) u.voice = voices[vi];
+  u.lang = voices[vi]?.lang || 'en-US';
+  u.rate = rateOverride ?? Number($('rateSelect').value);
+  u.pitch = 1;
+  speechSynthesis.speak(u);
+}
+async function repeat(times=3){
+  speechSynthesis.cancel();
+  for(let i=0;i<times;i++){
+    await new Promise(resolve=>{
+      const u = new SpeechSynthesisUtterance(sentences[currentIndex()].en);
+      const vi = Number($('voiceSelect').value || 0);
+      if(voices[vi]) u.voice = voices[vi];
+      u.lang = voices[vi]?.lang || 'en-US';
+      u.rate = Number($('rateSelect').value);
+      u.onend = ()=>setTimeout(resolve, 700);
+      speechSynthesis.speak(u);
+    });
+  }
+}
+$('prevBtn').onclick=()=>{pos=(pos-1+order.length)%order.length; render();};
+$('nextBtn').onclick=()=>{pos=(pos+1)%order.length; render();};
+$('speakBtn').onclick=()=>speak();
+$('slowBtn').onclick=()=>speak(0.65);
+$('repeatBtn').onclick=()=>repeat(3);
+$('hideJaBtn').onclick=()=>{
+  $('japanese').classList.toggle('hidden');
+  $('note').classList.toggle('hidden');
+  $('hideJaBtn').textContent = $('japanese').classList.contains('hidden') ? '和訳を表示' : '和訳を隠す';
+};
+$('doneBtn').onclick=()=>{ done.add(currentIndex()); saveDone(); render(); };
+$('shuffleBtn').onclick=()=>{
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]];}
+  pos=0; buildList();
+};
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'){e.preventDefault(); speak();}
+  if(e.key==='ArrowRight') $('nextBtn').click();
+  if(e.key==='ArrowLeft') $('prevBtn').click();
+});
+loadVoices();
+speechSynthesis.onvoiceschanged = loadVoices;
+buildList();
+</script>
+</body>
+</html>

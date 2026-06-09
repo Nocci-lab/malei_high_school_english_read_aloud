@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>時制 音読練習</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --ink:#172033; --muted:#687386;
+      --main:#2f6fed; --soft:#eaf1ff; --ok:#10a36f; --line:#dce3ef;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink);}
+    header{padding:22px 16px 14px; text-align:center;}
+    h1{margin:0 0 6px; font-size:clamp(24px,4vw,38px);}
+    .sub{color:var(--muted); font-size:15px;}
+    main{max-width:980px; margin:0 auto; padding:0 14px 28px;}
+    .panel{background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:0 10px 26px rgba(26,42,68,.08); padding:18px;}
+    .toprow{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px;}
+    .badge{background:var(--soft); color:var(--main); font-weight:800; padding:8px 12px; border-radius:999px;}
+    .progressWrap{height:12px; background:#edf1f7; border-radius:999px; overflow:hidden; flex:1; min-width:180px;}
+    .progress{height:100%; width:0%; background:var(--main); transition:.25s;}
+    .sentenceBox{border:2px solid var(--line); border-radius:18px; padding:20px; background:linear-gradient(180deg,#fff,#fbfdff); min-height:260px; display:flex; flex-direction:column; justify-content:center;}
+    .label{color:var(--muted); font-size:14px; font-weight:700; margin-bottom:8px;}
+    .en{font-family:Georgia,"Times New Roman",serif; font-size:clamp(27px,4vw,46px); line-height:1.35; font-weight:700; margin-bottom:22px;}
+    .ja{font-size:clamp(18px,2.5vw,26px); line-height:1.55; background:#fff8e7; border:1px solid #f1dfac; border-radius:14px; padding:14px;}
+    .ja.hidden{visibility:hidden;}
+    .buttons{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+    button, select{font-size:16px; border:none; border-radius:14px; padding:13px 12px; font-weight:800; cursor:pointer;}
+    button{background:#eef3fb; color:var(--ink);}
+    button.primary{background:var(--main); color:white;}
+    button.green{background:var(--ok); color:white;}
+    button:active{transform:translateY(1px)}
+    .settings{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px; color:var(--muted);}
+    select{background:white; border:1px solid var(--line); color:var(--ink); min-width:220px; font-weight:600;}
+    .list{margin-top:18px; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:8px;}
+    .item{border:1px solid var(--line); border-radius:12px; background:white; padding:10px; cursor:pointer; font-size:14px; line-height:1.35;}
+    .item.active{border-color:var(--main); background:var(--soft);}
+    .itemDone{color:var(--ok); font-weight:900; margin-right:4px;}
+    .small{font-size:13px; color:var(--muted); margin-top:10px;}
+    @media(max-width:680px){.buttons{grid-template-columns:repeat(2,1fr)} .sentenceBox{min-height:330px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>時制 音読練習</h1>
+    <div class="sub">一文ずつ表示・和訳つき・英文読み上げ</div>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="toprow">
+        <div class="badge" id="counter">1 / 41</div>
+        <div class="progressWrap"><div class="progress" id="progress"></div></div>
+      </div>
+
+      <div class="sentenceBox">
+        <div class="label" id="typeLabel">問題</div>
+        <div class="en" id="english"></div>
+        <div class="ja" id="japanese"></div>
+      </div>
+
+      <div class="buttons">
+        <button id="prevBtn">← 前へ</button>
+        <button class="primary" id="speakBtn">▶ 音読</button>
+        <button class="green" id="repeatBtn">🔁 3回</button>
+        <button id="nextBtn">次へ →</button>
+      </div>
+
+      <div class="buttons">
+        <button id="slowBtn">🐢 ゆっくり</button>
+        <button id="hideJaBtn">和訳を隠す</button>
+        <button id="doneBtn">できた ✓</button>
+        <button id="shuffleBtn">ランダム</button>
+      </div>
+
+      <div class="settings">
+        <label>Voice: <select id="voiceSelect"></select></label>
+        <label>Speed: <select id="rateSelect">
+          <option value="0.7">0.7 ゆっくり</option>
+          <option value="0.85" selected>0.85 少しゆっくり</option>
+          <option value="1">1.0 普通</option>
+        </select></label>
+      </div>
+      <div class="small">スペースキー：音読　← →：前後移動</div>
+    </section>
+    <div class="list" id="list"></div>
+  </main>
+
+<script>
+const sentences = [
+  {type:'例題 001', en:"We sometimes eat at Ken's Diner.", ja:'私たちは時々ケンの食堂で食事をします。'},
+  {type:'例題 002', en:'Mike is playing a video game in his room now.', ja:'マイクは今、自分の部屋でテレビゲームをしています。'},
+  {type:'例題 003', en:'These islands belong to Nagasaki Prefecture.', ja:'これらの島々は長崎県に属しています。'},
+  {type:'例題 004', en:"My parents weren't in the living room when I came home.", ja:'私が帰宅したとき、両親は居間にいませんでした。'},
+  {type:'例題 005', en:'By the end of this year, our new media center will open in Shinagawa.', ja:'今年の終わりまでに、私たちの新しいメディアセンターが品川に開く予定です。'},
+  {type:'例題 006', en:'The president is making a speech at the conference tomorrow.', ja:'大統領は明日、その会議でスピーチをする予定です。'},
+  {type:'例題 007', en:"I'm sorry, but he has gone to his office.", ja:'申し訳ありませんが、彼は事務所へ行ってしまいました。'},
+  {type:'例題 008', en:'Kate had eaten Japanese food several times before she came to Japan.', ja:'ケイトは日本に来る前に、日本食を何度か食べたことがありました。'},
+  {type:'例題 009', en:'William has been playing the violin since he was six years old.', ja:'ウィリアムは6歳の時からずっとバイオリンを弾いています。'},
+  {type:'例題 010', en:'A friend of mine said that his father owned a small supermarket in this town.', ja:'私の友人は、彼の父親がこの町で小さなスーパーを所有していると言いました。'},
+  {type:'例題 011', en:"I'll lend you the CD when we meet.", ja:'私たちが会うときに、そのCDをあなたに貸します。'},
+
+  {type:'問題 1', en:'I love to eat sushi these days.', ja:'私は最近、寿司を食べるのが大好きです。'},
+  {type:'問題 2', en:"Keiko is in the kitchen. She's making a pot of tea.", ja:'ケイコは台所にいます。彼女はお茶を入れています。'},
+  {type:'問題 3', en:'Lisa called me while I was eating dinner last night.', ja:'昨夜、私が夕食を食べている間に、リサが私に電話をしました。'},
+  {type:'問題 4', en:'Fruit in general tastes sweet.', ja:'果物は一般的に甘い味がします。'},
+  {type:'問題 5', en:'I was very tired yesterday because I attended a long meeting.', ja:'昨日、私は長い会議に出席したので、とても疲れていました。'},
+  {type:'問題 6', en:'Be careful, or you will slip on the wet floor.', ja:'気をつけなさい。さもないと、ぬれた床で滑りますよ。'},
+  {type:'問題 7', en:'I am going to play in a big soccer match next weekend.', ja:'私は来週末、大きなサッカーの試合に出る予定です。'},
+  {type:'問題 8', en:'I was about to call you.', ja:'私はちょうどあなたに電話しようとしていました。'},
+  {type:'問題 9', en:'They are leaving for Paris tomorrow.', ja:'彼らは明日パリへ出発します。'},
+  {type:'問題 10', en:'My sister will be living a comfortable life this time next year.', ja:'来年の今ごろ、私の妹は快適な生活を送っているでしょう。'},
+  {type:'問題 11', en:"Ryo bought a new suit, but he hasn't worn it yet.", ja:'リョウは新しいスーツを買いましたが、まだそれを着ていません。'},
+  {type:'問題 12', en:'Karl lived in London for five years when he was a child.', ja:'カールは子どものころ、5年間ロンドンに住んでいました。'},
+  {type:'問題 13', en:'My best friend and I have known each other since we were five.', ja:'私の親友と私は、5歳のころからお互いを知っています。'},
+  {type:'問題 14', en:'My friend from Africa had never seen snow until he came to Japan.', ja:'アフリカ出身の友人は、日本に来るまで雪を一度も見たことがありませんでした。'},
+  {type:'問題 15', en:'When Mary was introduced to Mrs. Smith, she realized she had met her before.', ja:'メアリーがスミス夫人に紹介されたとき、彼女は以前にその人に会ったことがあると気づきました。'},
+  {type:'問題 16', en:'At the end of next month, we will have lived here for three years.', ja:'来月の終わりで、私たちはここに3年間住んでいることになります。'},
+  {type:'問題 17', en:'I really must go and see the dentist. One of my teeth has been aching for weeks.', ja:'本当に歯医者に行かなければなりません。私の歯の1本が何週間も痛んでいます。'},
+  {type:'問題 18', en:'I had been doing my homework for an hour when my mother came home.', ja:'母が帰宅したとき、私は1時間ずっと宿題をしていました。'},
+  {type:'問題 19', en:'She will have been working in the accounting department for ten years by the end of next month.', ja:'来月の終わりで、彼女は経理部で10年間働き続けていることになります。'},
+  {type:'問題 20', en:'When I woke up this morning, I decided I wanted to get in shape.', ja:'今朝目が覚めたとき、私は体調を整えたいと思いました。'},
+  {type:'問題 21', en:'Yesterday in science class, I learned that water boils at 100 degrees Celsius.', ja:'昨日の理科の授業で、水は摂氏100度で沸騰すると学びました。'},
+  {type:'問題 22', en:'I will ask him about it as soon as he comes back.', ja:'彼が戻ってきたらすぐに、そのことについて彼に尋ねます。'},
+  {type:'問題 23', en:"I'll be back before it rains.", ja:'雨が降る前に戻ります。'},
+  {type:'問題 24', en:'If it rains on Thursday, we will not go to the beach.', ja:'木曜日に雨が降れば、私たちはビーチへ行きません。'},
+  {type:'問題 25', en:"I don't know if our teacher will come back next week.", ja:'私たちの先生が来週戻ってくるかどうか、私は知りません。'},
+  {type:'問題 26', en:'Turn off the lights when you leave the room.', ja:'部屋を出るときは、電気を消しなさい。'},
+  {type:'問題 27', en:'I wonder when he will come next.', ja:'彼が次にいつ来るのだろうと思います。'},
+
+  {type:'Writing 1', en:"I got your letter last week. I'm sorry I haven't written back.", ja:'先週あなたの手紙を受け取りました。返事を書いていなくてごめんなさい。'},
+  {type:'Writing 2', en:'The class had already begun when I arrived.', ja:'私が到着したとき、授業はすでに始まっていました。'},
+  {type:'Writing 3', en:'We will go swimming tomorrow if the weather is fine.', ja:'もし天気が良ければ、私たちは明日泳ぎに行きます。'}
+];
+
+let order = sentences.map((_,i)=>i);
+let pos = 0;
+let done = new Set(JSON.parse(localStorage.getItem('tenseDone')||'[]'));
+let voices = [];
+
+const $ = id => document.getElementById(id);
+function saveDone(){ localStorage.setItem('tenseDone', JSON.stringify([...done])); }
+function currentIndex(){ return order[pos]; }
+function render(){
+  const i = currentIndex(); const s = sentences[i];
+  $('counter').textContent = `${pos+1} / ${sentences.length}`;
+  $('progress').style.width = `${((pos+1)/sentences.length)*100}%`;
+  $('typeLabel').textContent = s.type;
+  $('english').textContent = s.en;
+  $('japanese').textContent = s.ja;
+  document.querySelectorAll('.item').forEach((el,k)=>{
+    el.classList.toggle('active', k===pos);
+    const idx = order[k];
+    el.innerHTML = `${done.has(idx)?'<span class="itemDone">✓</span>':''}${sentences[idx].type}: ${sentences[idx].en}`;
+  });
+}
+function buildList(){
+  const list = $('list'); list.innerHTML='';
+  order.forEach((idx,k)=>{
+    const div = document.createElement('div'); div.className='item';
+    div.onclick = ()=>{pos=k; render(); window.scrollTo({top:0,behavior:'smooth'});};
+    list.appendChild(div);
+  });
+  render();
+}
+function loadVoices(){
+  const all = speechSynthesis.getVoices();
+  voices = all.filter(v=>v.lang && v.lang.toLowerCase().startsWith('en'));
+  const preferred = voices.findIndex(v => /female|samantha|victoria|karen|zira|susan|jenny|aria|natural/i.test(v.name));
+  const sel = $('voiceSelect'); sel.innerHTML='';
+  voices.forEach((v,i)=>{
+    const opt=document.createElement('option'); opt.value=i; opt.textContent=`${v.name} (${v.lang})`; sel.appendChild(opt);
+  });
+  if(preferred >= 0) sel.value = preferred;
+}
+function makeUtterance(){
+  const u = new SpeechSynthesisUtterance(sentences[currentIndex()].en);
+  const vi = Number($('voiceSelect').value || 0);
+  if(voices[vi]) u.voice = voices[vi];
+  u.lang = voices[vi]?.lang || 'en-US';
+  u.rate = Number($('rateSelect').value);
+  u.pitch = 1;
+  return u;
+}
+function speak(rateOverride=null){
+  speechSynthesis.cancel();
+  const u = makeUtterance();
+  if(rateOverride !== null) u.rate = rateOverride;
+  speechSynthesis.speak(u);
+}
+async function repeat(times=3){
+  speechSynthesis.cancel();
+  for(let i=0;i<times;i++){
+    await new Promise(resolve=>{
+      const u = makeUtterance();
+      u.onend = ()=>setTimeout(resolve, 700);
+      speechSynthesis.speak(u);
+    });
+  }
+}
+$('prevBtn').onclick=()=>{pos=(pos-1+order.length)%order.length; render();};
+$('nextBtn').onclick=()=>{pos=(pos+1)%order.length; render();};
+$('speakBtn').onclick=()=>speak();
+$('slowBtn').onclick=()=>speak(0.65);
+$('repeatBtn').onclick=()=>repeat(3);
+$('hideJaBtn').onclick=()=>{
+  $('japanese').classList.toggle('hidden');
+  $('hideJaBtn').textContent = $('japanese').classList.contains('hidden') ? '和訳を表示' : '和訳を隠す';
+};
+$('doneBtn').onclick=()=>{ done.add(currentIndex()); saveDone(); render(); };
+$('shuffleBtn').onclick=()=>{
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]];}
+  pos=0; buildList();
+};
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'){e.preventDefault(); speak();}
+  if(e.key==='ArrowRight') $('nextBtn').click();
+  if(e.key==='ArrowLeft') $('prevBtn').click();
+});
+loadVoices();
+speechSynthesis.onvoiceschanged = loadVoices;
+buildList();
+</script>
+</body>
+</html>
